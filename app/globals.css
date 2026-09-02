@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --bg-ink: #090909;
+  --bg-soft: #111111;
+  --bg-elevated: #171717;
+  --border-hairline: rgba(255, 255, 255, 0.12);
+  --text-primary: #F3F2EE;
+  --text-muted: #A3A3A3;
+  --google-blue: #4285F4;
+  --google-red: #EA4335;
+  --google-yellow: #FBBC04;
+  --google-green: #34A853;
+
+  --color-blue: #4285F4;
+  --color-red: #EA4335;
+  --color-yellow: #FBBC04;
+  --color-green: #34A853;
+
+  --background: var(--bg-ink);
+  --foreground: var(--text-primary);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-google-sans), system-ui, sans-serif;
+}
+
+/* Minimalist Scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-bg-ink: var(--bg-ink);
+  --color-bg-soft: var(--bg-soft);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-border-hairline: var(--border-hairline);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-muted: var(--text-muted);
+  --color-google-blue: var(--google-blue);
+  --color-google-red: var(--google-red);
+  --color-google-yellow: var(--google-yellow);
+  --color-google-green: var(--google-green);
+  --font-sans: var(--font-google-sans);
+  --font-silkscreen: var(--font-silkscreen);
+  --font-technical: var(--font-technical);
+  --font-design: var(--font-design);
+  --font-media: var(--font-media);
+  --font-pr: var(--font-pr);
+  --font-management: var(--font-management);
+  --font-marketing: var(--font-marketing);
+  --font-bebas-neue: var(--font-bebas-neue);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #090909;
+    --foreground: #F3F2EE;
+    --color-blue: #4285F4;
+    --color-red: #EA4335;
+    --color-yellow: #FBBC04;
+    --color-green: #34A853;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+}

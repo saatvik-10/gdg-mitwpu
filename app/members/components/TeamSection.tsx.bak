@@ -1,0 +1,410 @@
+"use client";
+
+import React, { useRef, useEffect } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Team } from "../data/teams-data";
+import { MemberCard } from "./MemberCard";
+import { MobileCarousel } from "./MobileCarousel.tsx.bak";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
+
+// Google colors for the ticker animation (matching NavMenu)
+const GOOGLE_COLORS = [
+  "#4285F4", // Google Blue
+  "#EA4335", // Google Red
+  "#FBBC04", // Google Yellow
+  "#34A853", // Google Green
+];
+
+const SETTLED_COLOR = "#F3F2EE";
+
+type TickerCharReel = {
+  charEl: HTMLElement;
+  top: HTMLElement;
+  bottom: HTMLElement;
+  index: number;
+};
+
+interface TeamSectionProps {
+  team: Team;
+  onBecomeActive?: (id: string) => void;
+}
+
+export function TeamSection({ team, onBecomeActive }: TeamSectionProps) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const leadersRef = useRef<HTMLDivElement>(null);
+  const membersRef = useRef<HTMLDivElement>(null);
+  const reelsRef = useRef<TickerCharReel[]>([]);
+
+  const isAdmin = team.id === "admin";
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    let loopCall: gsap.core.Tween | null = null;
+    let tickerTl: gsap.core.Timeline | null = null;
+
+    const ctx = gsap.context(() => {
+      // Track active section for navigator if callback is provided
+      if (onBecomeActive) {
+        ScrollTrigger.create({
+          trigger: sectionRef.current,
+          start: "top 40%",
+          end: "bottom 40%",
+          onEnter: () => onBecomeActive(team.id),
+          onEnterBack: () => onBecomeActive(team.id),
+        });
+      }
+
+      if (prefersReducedMotion) return;
+
+      // Rolling ticker animation that runs on a timer
+      const playTicker = () => {
+        if (!reelsRef.current.length) return;
+
+        const shuffled = [...reelsRef.current].sort(() => Math.random() - 0.5);
+        const wordTl = gsap.timeline({
+          onComplete: () => {
+            loopCall = gsap.delayedCall(3.5, playTicker);
+          },
+        });
+        tickerTl = wordTl;
+
+        shuffled.forEach((reel, i) => {
+          const color = GOOGLE_COLORS[reel.index % GOOGLE_COLORS.length];
+          const startTime = i * 0.035;
+
+          // 1. Transition departing letter into Google color
+          wordTl.fromTo(
+            reel.top,
+            { color: SETTLED_COLOR },
+            {
+              color: color,
+              duration: 0.22,
+              ease: "power1.out",
+            },
+            startTime
+          );
+
+          // 2. Animate vertical roll up
+          wordTl.fromTo(
+            [reel.top, reel.bottom],
+            { yPercent: 0 },
+            {
+              yPercent: -100,
+              duration: 0.44,
+              ease: "power2.inOut",
+              onComplete: () => {
+                gsap.set([reel.top, reel.bottom], {
+                  yPercent: 0,
+                  clearProps: "color",
+                });
+              },
+            },
+            startTime
+          );
+        });
+      };
+
+      // 1. Header Reveal (Character by character with stagger like AboutPara)
+      if (headerRef.current) {
+        const charNodes = headerRef.current.querySelectorAll<HTMLElement>(".ticker-char");
+        const reels: TickerCharReel[] = [];
+        charNodes.forEach((el, i) => {
+          const top = el.querySelector(".ticker-top") as HTMLElement;
+          const bottom = el.querySelector(".ticker-bottom") as HTMLElement;
+          if (top && bottom) {
+            reels.push({ charEl: el, top, bottom, index: i });
+          }
+        });
+        reelsRef.current = reels;
+
+        const charElements = reels.map((r) => r.charEl);
+
+        const headerTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: headerRef.current,
+            // Admin reveals earlier to sync with the hero transition
+            start: "top 95%",
+            toggleActions: "play none none reverse",
+            onLeaveBack: () => {
+              if (loopCall) loopCall.kill();
+              if (tickerTl) tickerTl.kill();
+            },
+          },
+          onComplete: () => {
+            // Trigger color rolling ticker after 3 seconds timeout
+            if (loopCall) loopCall.kill();
+            loopCall = gsap.delayedCall(3.0, playTicker);
+          },
+        });
+
+        // Line reveals first
+        if (lineRef.current) {
+          headerTl.fromTo(
+            lineRef.current,
+            { scaleX: 0, opacity: 0, transformOrigin: "left center" },
+            {
+              scaleX: 1,
+              opacity: 0.35,
+              duration: 0.5,
+              ease: "power2.out",
+            },
+            0
+          );
+        }
+
+        // Heading characters stagger in one by one (like AboutPara)
+        if (charElements.length > 0) {
+          headerTl.fromTo(
+            charElements,
+            { yPercent: 100, opacity: 0 },
+            {
+              yPercent: 0,
+              opacity: 1,
+              duration: 0.65,
+              stagger: 0.025,
+              ease: "power3.out",
+            },
+            0.05
+          );
+        }
+
+        // Description fades up
+        if (descRef.current) {
+          headerTl.fromTo(
+            descRef.current,
+            { opacity: 0, y: 20 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              ease: "power2.out",
+            },
+            "-=0.3"
+          );
+        }
+      }
+
+      // 2. Admin Cards Reveal (Simultaneous, NO stagger)
+      if (isAdmin && leadersRef.current) {
+        const cards = leadersRef.current.querySelectorAll(".member-card-wrap");
+        if (cards.length) {
+          gsap.fromTo(
+            cards,
+            { opacity: 0, y: 40 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.8,
+              stagger: 0, // Simultaneous fade in
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: leadersRef.current,
+                start: "top 75%", // Triggers as hero scales down
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        }
+      }
+
+      // 3. Leaders Cards Reveal (Non-admin, Staggered)
+      if (!isAdmin && leadersRef.current) {
+        const cards = leadersRef.current.querySelectorAll(".member-card-wrap");
+        if (cards.length) {
+          gsap.fromTo(
+            cards,
+            { opacity: 0, y: 40, scale: 0.97 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: leadersRef.current,
+                start: "top 85%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        }
+      }
+
+      // 4. Members Cards Reveal (Non-admin, Staggered)
+      if (!isAdmin && membersRef.current) {
+        const cards = membersRef.current.querySelectorAll(".member-card-wrap");
+        if (cards.length) {
+          gsap.fromTo(
+            cards,
+            { opacity: 0, y: 40, scale: 0.97 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: membersRef.current,
+                start: "top 85%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        }
+      }
+    }, sectionRef);
+
+    return () => {
+      if (loopCall) loopCall.kill();
+      if (tickerTl) tickerTl.kill();
+      ctx.revert();
+    };
+  }, [team.id, onBecomeActive, isAdmin]);
+
+  const allAdminMembers = isAdmin ? team.members : [];
+  const leaders = isAdmin ? [] : team.leaders;
+  const members = isAdmin ? [] : team.members;
+
+  // Split title into words and characters
+  const words = team.name.split(" ");
+
+  return (
+    <section
+      ref={sectionRef}
+      id={`team-${team.id}`}
+      // Admin gets slightly less top padding so it tucks under the pinned hero nicely, with solid ink black background
+      className={`relative w-full bg-[#090909] ${isAdmin ? "pt-[25vh] md:pt-[35vh] pb-16 sm:pb-24 md:pb-32 z-10" : "py-16 sm:py-24 md:py-32 z-10"}`}
+    >
+      <div className="max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
+        <div ref={headerRef} className="mb-8 sm:mb-12 md:mb-16 flex flex-col items-center text-center">
+          <div className="mb-3 sm:mb-4">
+            <div
+              ref={lineRef}
+              className="h-px w-10 sm:w-12 will-change-transform"
+              style={{ backgroundColor: team.accentHex, opacity: 0.35 }}
+            />
+          </div>
+          <h2
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[0.95] text-[#F3F2EE] uppercase select-none inline-flex flex-wrap justify-center items-baseline gap-x-[0.25em] sm:gap-x-[0.3em] gap-y-1"
+          >
+            {words.map((word, wordIdx) => (
+              <span key={wordIdx} className="inline-flex items-baseline overflow-hidden">
+                {word.split("").map((char, charIdx) => (
+                  <span
+                    key={charIdx}
+                    className="ticker-char inline-block relative overflow-hidden align-top will-change-transform"
+                  >
+                    <span className="ticker-top block will-change-transform leading-[0.95]">
+                      {char}
+                    </span>
+                    <span className="ticker-bottom block absolute top-full left-0 w-full will-change-transform leading-[0.95]">
+                      {char}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            ))}
+          </h2>
+          <p
+            ref={descRef}
+            className="mt-2.5 sm:mt-3 text-sm sm:text-base md:text-lg text-[#A3A3A3] max-w-lg leading-relaxed mx-auto"
+          >
+            {team.description}
+          </p>
+        </div>
+
+        {/* Desktop View (Grid) */}
+        <div className="hidden md:block">
+          {/* Admin Panel (Single row) */}
+          {isAdmin && (
+            <div
+              ref={leadersRef}
+              className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
+            >
+              {allAdminMembers.map((m, i) => (
+                <div key={m.name} className="member-card-wrap">
+                  <MemberCard
+                    name={m.name}
+                    role={m.role}
+                    img={m.img}
+                    accentHex={team.accentHex}
+                    isLead={m.isLead}
+                    index={i}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Leaders (Non-admin) */}
+          {!isAdmin && leaders.length > 0 && (
+            <div
+              ref={leadersRef}
+              className="flex justify-center gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10 md:mb-14 w-full"
+            >
+              {leaders.map((m, i) => (
+                <div
+                  key={m.name}
+                  className="member-card-wrap w-[calc(50%-0.5rem)] sm:w-[calc((100%-2*1.5rem)/3)] lg:w-[calc((100%-3*2rem)/4)] max-w-[280px]"
+                >
+                  <MemberCard
+                    name={m.name}
+                    role={m.role}
+                    img={m.img}
+                    accentHex={team.accentHex}
+                    isLead
+                    index={i}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Members (Non-admin) */}
+          {!isAdmin && members.length > 0 && (
+            <div
+              ref={membersRef}
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
+            >
+              {members.map((m, i) => (
+                <div key={m.name} className="member-card-wrap">
+                  <MemberCard
+                    name={m.name}
+                    role={m.role}
+                    img={m.img}
+                    accentHex={team.accentHex}
+                    index={i}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Mobile View (Carousel) */}
+        <div className="block md:hidden w-full overflow-visible">
+          <MobileCarousel 
+            members={isAdmin ? allAdminMembers : [...leaders, ...members]} 
+            accentHex={team.accentHex} 
+          />
+        </div>
+      </div>
+    </section>
+  );
+}

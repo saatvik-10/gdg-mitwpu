@@ -1,0 +1,316 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import gsap from "gsap";
+import { Member } from "../data/teams-data";
+import { MemberCard } from "./MemberCard";
+
+interface MobileCarouselProps {
+  members: Member[];
+  accentHex: string;
+}
+
+export function MobileCarousel({ members, accentHex }: MobileCarouselProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  
+  // Continuous Physics Engine Proxy
+  const progressRef = useRef({ value: 0 });
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
+  
+  const autoplayTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Drag State
+  const dragState = useRef({
+    startX: 0,
+    startY: 0,
+    startProgress: 0,
+    isDragging: false,
+    isHorizontal: null as boolean | null,
+  });
+
+  const isInView = useRef(false);
+  const lastScrollY = useRef(0);
+
+  const total = members.length;
+
+  // Render function that applies continuous float progress to DOM
+  const renderCarousel = useCallback(() => {
+    if (total <= 1) return;
+
+    cardsRef.current.forEach((card, i) => {
+      if (!card) return;
+      
+      // Calculate continuous relative offset wrapped to [-total/2, total/2]
+      let offset = i - progressRef.current.value;
+      offset = ((offset % total) + total) % total;
+      if (offset > total / 2) offset -= total;
+      
+      if (total === 2 && offset < -0.5) offset += 2;
+
+      // UPDATED GEOMETRY: Center is BIGGER, Outer is further out (x: 72)
+      const states = [
+        { x: 0, rotateY: 0, scale: 1.05, opacity: 1, brightness: 1, zIndex: 10 },          // 0: CENTER
+        { x: 72, rotateY: -18, scale: 0.85, opacity: 0.65, brightness: 0.35, zIndex: 5 },  // 1: SIDE (Clipped 25% visible)
+        { x: 140, rotateY: -25, scale: 0.7, opacity: 0, brightness: 0, zIndex: 2 },        // 2: OFFSCREEN ENTER/EXIT
+        { x: 140, rotateY: -25, scale: 0, opacity: 0, brightness: 0, zIndex: 0 }           // 3: INVISIBLE WRAP ZONE
+      ];
+
+      const absOffset = Math.abs(offset);
+      let x, rotateY, scale, opacity, brightness, zIndex;
+
+      if (absOffset >= 3) {
+         x = 0; rotateY = 0; scale = 0; opacity = 0; brightness = 0; zIndex = 0;
+      } else {
+         const lower = Math.floor(absOffset);
+         const upper = Math.ceil(absOffset);
+         const t = absOffset - lower;
+
+         const sLower = states[lower];
+         const sUpper = states[upper];
+
+         const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+         x = lerp(sLower.x, sUpper.x, t);
+         rotateY = lerp(sLower.rotateY, sUpper.rotateY, t);
+         scale = lerp(sLower.scale, sUpper.scale, t);
+         opacity = lerp(sLower.opacity, sUpper.opacity, t);
+         brightness = lerp(sLower.brightness, sUpper.brightness, t);
+         
+         zIndex = t < 0.5 ? sLower.zIndex : sUpper.zIndex;
+      }
+      
+      // Calculate text opacity for the inner MemberCard text (only visible when near center)
+      const textOpacity = Math.max(0, 1 - (absOffset * 2));
+      
+      if (offset < 0) {
+        x = -x;
+        rotateY = -rotateY;
+      }
+
+      gsap.set(card, {
+        x: `${x}vw`,
+        rotationY: rotateY,
+        scale: scale,
+        opacity: opacity,
+        filter: `brightness(${brightness})`,
+        zIndex: zIndex,
+      });
+
+      // Animate the text overlay inside the card
+      const textOverlays = card.querySelectorAll('.mobile-text-overlay');
+      if (textOverlays.length > 0) {
+          gsap.set(textOverlays, { opacity: textOpacity });
+      }
+    });
+
+    // Update centralized text only when the logical center index crosses a threshold
+    const newIndex = Math.round(progressRef.current.value);
+    const normalized = ((newIndex % total) + total) % total;
+    if (normalized !== activeIndexRef.current) {
+        activeIndexRef.current = normalized;
+        setActiveIndex(normalized); // Triggers React re-render for text panel
+    }
+  }, [total]);
+
+  // Initial Render
+  useEffect(() => {
+      renderCarousel();
+  }, [renderCarousel]);
+
+  // Autoplay System
+  const triggerAutoplay = useCallback(() => {
+    if (total <= 1) return;
+    gsap.to(progressRef.current, {
+      value: Math.round(progressRef.current.value) + 1,
+      duration: 0.8,
+      ease: "power2.inOut",
+      onUpdate: renderCarousel,
+      onComplete: () => {
+        autoplayTimer.current = setTimeout(triggerAutoplay, 2500);
+      }
+    });
+  }, [renderCarousel, total]);
+
+  const pauseAutoplay = useCallback(() => {
+    if (autoplayTimer.current) clearTimeout(autoplayTimer.current);
+    gsap.killTweensOf(progressRef.current);
+  }, []);
+
+  const resumeAutoplay = useCallback(() => {
+    if (autoplayTimer.current) clearTimeout(autoplayTimer.current);
+    autoplayTimer.current = setTimeout(triggerAutoplay, 3000);
+  }, [triggerAutoplay]);
+
+  useEffect(() => {
+    resumeAutoplay();
+    return pauseAutoplay;
+  }, [resumeAutoplay, pauseAutoplay]);
+
+  // Button Navigation
+  const handleNav = (dir: 1 | -1) => {
+    pauseAutoplay();
+    gsap.to(progressRef.current, {
+      value: Math.round(progressRef.current.value) + dir,
+      duration: 0.7,
+      ease: "power2.inOut",
+      onUpdate: renderCarousel,
+      onComplete: resumeAutoplay
+    });
+  };
+
+  // Drag Interactions
+  const getPointerPos = (e: React.TouchEvent | React.MouseEvent | TouchEvent | MouseEvent) => {
+    if ("touches" in e) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+  };
+
+  const onPointerDown = (e: React.TouchEvent | React.MouseEvent) => {
+    const pos = getPointerPos(e);
+    dragState.current = {
+      startX: pos.x,
+      startY: pos.y,
+      startProgress: progressRef.current.value,
+      isDragging: true,
+      isHorizontal: null,
+    };
+    pauseAutoplay();
+  };
+
+  const onPointerMove = (e: React.TouchEvent | React.MouseEvent) => {
+    const state = dragState.current;
+    if (!state.isDragging) return;
+
+    const pos = getPointerPos(e);
+    const dx = pos.x - state.startX;
+    const dy = pos.y - state.startY;
+
+    if (state.isHorizontal === null) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        state.isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+    }
+
+    if (state.isHorizontal) {
+      if (e.cancelable) e.preventDefault();
+      
+      const progressDelta = -dx / 150;
+      progressRef.current.value = state.startProgress + progressDelta;
+      renderCarousel();
+    }
+  };
+
+  const onPointerUp = () => {
+    const state = dragState.current;
+    if (!state.isDragging) return;
+    state.isDragging = false;
+
+    if (!state.isHorizontal) {
+      resumeAutoplay();
+      return;
+    }
+
+    const current = progressRef.current.value;
+    const delta = current - state.startProgress;
+    
+    let target = Math.round(current);
+    if (Math.abs(delta) > 0.25) {
+       target = state.startProgress + (Math.sign(delta) * Math.ceil(Math.abs(delta)));
+    } else {
+       target = Math.round(state.startProgress);
+    }
+
+    gsap.to(progressRef.current, {
+      value: target,
+      duration: 0.6,
+      ease: "power2.out",
+      onUpdate: renderCarousel,
+      onComplete: resumeAutoplay
+    });
+  };
+
+  if (members.length === 0) return null;
+
+  return (
+    <div className="relative w-full overflow-hidden py-12 flex flex-col items-center select-none">
+      
+      {/* 3D Perspective Stage */}
+      <div
+        ref={containerRef}
+        className="relative w-full h-[480px] sm:h-[520px] flex justify-center items-center touch-pan-y"
+        style={{ perspective: "1100px", transformStyle: "preserve-3d" }}
+        
+        onTouchStart={onPointerDown}
+        onTouchMove={onPointerMove}
+        onTouchEnd={onPointerUp}
+        onTouchCancel={onPointerUp}
+        onMouseDown={onPointerDown}
+        onMouseMove={onPointerMove}
+        onMouseUp={onPointerUp}
+        onMouseLeave={onPointerUp}
+      >
+        {members.map((member, i) => (
+          <div
+            key={member.name + i}
+            ref={(el) => {
+              cardsRef.current[i] = el;
+            }}
+            className="absolute w-[72vw] min-w-[220px] max-w-[310px] will-change-transform rounded-2xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing"
+            style={{ 
+              opacity: 0, 
+              transformStyle: "preserve-3d" 
+            }}
+          >
+            {/* Stripped down card: only the image is rendered here now */}
+            <MemberCard
+              name={member.name}
+              role={member.role}
+              img={member.img}
+              accentHex={accentHex}
+              isLead={member.isLead}
+              index={i}
+              hideText={false}
+              customAspect="aspect-[3/4]"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Minimal Navigation Pills */}
+      <div className="mt-6 flex items-center justify-center gap-6 z-40 bg-[#1A1A1A] px-2 py-1.5 rounded-full border border-white/5 shadow-xl">
+        <button
+          onClick={() => handleNav(-1)}
+          className="px-4 py-2 rounded-full bg-[#2A2A2A] text-[#F3F2EE] text-xs font-semibold hover:bg-[#333] transition-colors active:scale-95 tracking-wide uppercase"
+          aria-label="Previous card"
+        >
+          Prev
+        </button>
+
+        <div className="flex items-center gap-1.5 px-1">
+          {members.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === activeIndex
+                  ? "w-4 bg-[#F3F2EE]"
+                  : "w-1.5 bg-[#F3F2EE]/30"
+              }`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => handleNav(1)}
+          className="px-4 py-2 rounded-full bg-[#F3F2EE] text-[#090909] text-xs font-bold hover:bg-[#E5E4E0] transition-colors active:scale-95 tracking-wide uppercase"
+          aria-label="Next card"
+        >
+          Next
+        </button>
+      </div>
+
+    </div>
+  );
+}
