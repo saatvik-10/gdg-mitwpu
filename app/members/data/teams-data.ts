@@ -71,7 +71,7 @@ export const TEAMS_DATA: Team[] = [
     accentHex: "#4285F4",
     leaders: [
       { name: "Saatvik Madan", role: "Head of Tech", img: "/assets/members/saatvik-tech-head.jpeg", isLead: true },
-      { name: "Shalaka Bhor", role: "Co-Head", img: "/assets/members/shalaka-tech.jpeg", isLead: true },
+      { name: "Shalaka Bhor", role: "Co-Head of Tech", img: "/assets/members/shalaka-tech.jpeg", isLead: true },
     ],
     members: [
       { name: "Soham Paranjape", role: "Tech Member", img: "/assets/members/soham-paranjape-tech.jpeg" },
@@ -93,7 +93,7 @@ export const TEAMS_DATA: Team[] = [
     accentHex: "#34A853",
     leaders: [
       { name: "Shivank Singh", role: "Head of Management", img: "/assets/members/shivank-singh-man-h.jpeg", isLead: true },
-      { name: "Roch Lopez", role: "Co-Head", img: "/assets/members/roch-lopez-man-ch.png", isLead: true },
+      { name: "Roch Lopez", role: "Co-Head of Management", img: "/assets/members/roch-lopez-man-ch.png", isLead: true },
     ],
     members: [
       { name: "Atharva Kumawat", role: "Management Member", img: "/assets/members/atharva-kumawat-man.jpg" },
@@ -114,7 +114,7 @@ export const TEAMS_DATA: Team[] = [
     accentHex: "#FBBC04",
     leaders: [
       { name: "Sejal Vitthalkar", role: "Head of PR", img: "/assets/members/sejal-vitthalkar-pr-h.jpg", isLead: true },
-      { name: "Harsh Jadhav", role: "Co-Head", img: "/assets/members/harsh-jadhav-pr.jpg", isLead: true },
+      { name: "Harsh Jadhav", role: "Co-Head of PR", img: "/assets/members/harsh-jadhav-pr.jpg", isLead: true },
     ],
     members: [
       { name: "Akshata Jadhav", role: "PR Member", img: "/assets/members/akshata-jadhav-pr.webp" },
