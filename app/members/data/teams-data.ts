@@ -74,11 +74,12 @@ export const TEAMS_DATA: Team[] = [
       { name: "Shalaka Bhor", role: "Co-Head", img: "/assets/members/shalaka-tech.jpeg", isLead: true },
     ],
     members: [
+      { name: "Soham Paranjape", role: "Tech Member", img: "/assets/members/soham-paranjape-tech.jpeg" },
       { name: "Manas Pasarkar", role: "Tech Member", img: "/assets/members/manas-tech.jpeg" },
-      { name: "Soham Paranjape", role: "Tech Member", img: "/assets/members/soham-paranjape-tech.jpg" },
+      { name: "Geet Lunkad", role: "Tech Member", img: "/assets/members/geet-lunkad-tech.jpeg" },
+      { name: "Kanak Patil", role: "Tech Member", img: "/assets/members/kanak-tech.jpeg" },
       { name: "Aayushi Jaju", role: "Tech Member", img: "/assets/members/aayushi-jaju-tech.jpeg" },
       { name: "Siddhi Sawant", role: "Tech Member", img: "/assets/members/siddhi-sawant-tech.jpg" },
-      { name: "Geet Lunkad", role: "Tech Member", img: "/assets/members/geet-lunkad-tech.jpeg" },
       { name: "Himanshu Raghav", role: "Tech Member", img: "/assets/members/himanshu-raghav-tech.png" },
       { name: "Swarali Desai", role: "Tech Member", img: "/assets/members/swarali-desai-tech.jpg" },
     ],
@@ -118,7 +119,6 @@ export const TEAMS_DATA: Team[] = [
     members: [
       { name: "Akshata Jadhav", role: "PR Member", img: "/assets/members/akshata-jadhav-pr.webp" },
       { name: "Ameya Patil", role: "PR Member", img: "/assets/members/ameya-patil-pr.jpeg" },
-      { name: "Anshul Patil", role: "PR Member", img: "/assets/members/anshul-patil-pr.jpg" },
     ],
   },
   {
@@ -149,9 +149,9 @@ export const TEAMS_DATA: Team[] = [
       { name: "Manya Rao", role: "Co-Head of Design", img: "/assets/members/manya-des-ch.jpeg", isLead: true },
     ],
     members: [
+      { name: "Ridheema Andotra", role: "Design Member", img: "/assets/members/ridheema-des.jpeg" },
       { name: "Anagha Naik", role: "Design Member", img: "/assets/members/anagha-naik-des.jpg" },
       { name: "Atharv Naik", role: "Design Member", img: "/assets/members/atharv-naik-des.jpg" },
-      { name: "Samruddhi Raskar", role: "Design Member", img: "/assets/members/samruddhi-raskar-des.jpg" },
     ],
   },
   {
@@ -164,6 +164,7 @@ export const TEAMS_DATA: Team[] = [
     leaders: [
       { name: "Khushi Shirbhate", role: "Head of Media", img: "/assets/members/khushi-shirbhate-med-h.jpeg", isLead: true },
       { name: "Jayesh Daithankar", role: "Co-Head of Media", img: "/assets/members/jayesh-daithankar-med-ch.jpeg", isLead: true },
+      { name: "Samruddhi Raskar", role: "Media Member", img: "/assets/members/samruddhi-raskar-des.jpg" },
     ],
     members: [],
   },
